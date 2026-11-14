@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>FIELD//WATCH — Agricultural Satellite &amp; Weather Tracker</title>
+	<meta name="description"
+		content="Track a field from orbit: 7-day satellite pass replay, Sentinel-2 and Landsat imagery, full Open-Meteo weather deck and AI agronomy insights.">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link
+		href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap"
+		rel="stylesheet">
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+	<link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
+	<!-- ── MARQUEE ── -->
+	<div class="marquee" aria-hidden="true">
+		<div class="marquee-track">
+			<span>★ 7-DAY ORBIT REPLAY</span><span>SENTINEL-2 · 145 KM</span><span>LANDSAT 8/9 · 93 KM</span><span>★
+				CELESTRAK TLE · 2H CACHE</span><span>★ OPEN-METEO 16-DAY DECK</span>
+			<span>★ 7-DAY ORBIT REPLAY</span><span>SENTINEL-2 · 145 KM</span><span>LANDSAT 8/9 · 93 KM</span><span>★
+				CELESTRAK TLE · 2H CACHE</span><span>★ OPEN-METEO 16-DAY DECK</span>
+		</div>
+	</div>
+
+	<!-- ── HEADER ── -->
+	<header class="site-header">
+		<a href="#" class="logo">
+			<span class="logo-icon">
+				<svg viewBox="0 0 24 24" width="22" aria-hidden="true">
+					<path
+						d="M12 2c-1.2 2.4-3.6 4-6.4 4C5 6 4.4 6.1 3.8 6.3 3.3 8 3 9.9 3 11.8 3 17.4 7 22 12 22s9-4.6 9-10.2c0-1.9-.3-3.8-.8-5.5-.6-.2-1.2-.3-1.8-.3-2.8 0-5.2-1.6-6.4-4Z"
+						fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+					<path d="M12 21V9m0 5 3.5-3M12 14 8.5 11" fill="none" stroke="currentColor" stroke-width="2"
+						stroke-linecap="round" />
+				</svg>
+			</span>
+			FIELD<span class="logo-slash">//</span>WATCH
+		</a>
+
+		<nav class="main-nav">
+			<a href="#map" class="active">Map</a>
+			<a href="#passes">Passes</a>
+			<a href="#imagery">Imagery</a>
+			<a href="#weather">Weather</a>
+			<a href="#ai">AI</a>
+			<a href="./scene.html">3D Field</a>
+		</nav>
+
+		<div class="header-actions">
+			<span class="byok-pill" title="Bring your own AI key — nothing is proxied through a server">BYOK</span>
+			<button class="ghost-btn" id="tle-refresh" type="button"
+				title="Force a fresh TLE download, bypassing the 2-hour cache">↻ TLE</button>
+			<button class="cart-toggle" id="ai-key-btn" type="button">
+				<span>AI KEY</span>
+				<span class="cart-badge" id="ai-key-badge">!</span>
+			</button>
+		</div>
+	</header>
+
+	<!-- ── HERO ── -->
+	<section class="hero">
+		<div class="hero-main">
+			<div class="hero-sticker s1">ORBIT<br>REPLAY<br>7 DAYS</div>
+			<h1 class="hero-title">
+				YOUR FIELD<br>
+				<span class="outline">FROM SPACE.</span>
+			</h1>
+			<p class="hero-sub">Search a place. We replay <b>7 days of satellite orbits</b>, pull the freshest
+				Sentinel-2 &amp; Landsat pixels and stack <b>16 days of weather</b> — then an AI agronomist reads it
+				all.</p>
+
+			<div class="search-wrap">
+				<form class="search-form" id="search-form" autocomplete="off">
+					<input type="text" id="place-input" name="place"
+						placeholder="Search a place — or paste 6.9271, 79.8542" aria-label="Search for a place"
+						aria-autocomplete="list" aria-controls="suggestions" autocomplete="off" required>
+					<button class="coord-toggle" type="button" id="coord-toggle"
+						title="Enter exact latitude and longitude" aria-label="Enter exact coordinates">⊕</button>
+					<button class="search-btn" type="submit" id="search-btn" data-label="TRACK →">TRACK →</button>
+				</form>
+				<div class="suggestions" id="suggestions" hidden></div>
+				<form class="coord-form" id="coord-form" hidden>
+					<div class="field">
+						<label for="coord-lat">LATITUDE</label>
+						<input type="text" id="coord-lat" inputmode="decimal" placeholder="6.92710" autocomplete="off"
+							aria-label="Latitude">
+					</div>
+					<div class="field">
+						<label for="coord-lon">LONGITUDE</label>
+						<input type="text" id="coord-lon" inputmode="decimal" placeholder="79.85420" autocomplete="off"
+							aria-label="Longitude">
+					</div>
+					<button class="search-btn coord-go" type="submit">GO →</button>
+				</form>
+			</div>
+			<div class="quick-chips" id="quick-chips">
+				<button type="button" data-place="Colombo, Sri Lanka">Colombo</button>
+				<button type="button" data-place="Nakuru, Kenya">Nakuru</button>
+				<button type="button" data-place="Ludhiana, Punjab, India">Punjab</button>
+				<button type="button" data-place="Ames, Iowa, USA">Iowa</button>
+				<button type="button" data-place="Ribeirão Preto, Brazil">Ribeirão Preto</button>
+				<button type="button" data-place="Can Tho, Vietnam">Mekong</button>
+			</div>
+		</div>
+
+		<div class="hero-card" id="hero-card">
+			<div class="hc-row"><span>TARGET</span><b id="hc-place">—</b></div>
+			<div class="hc-row"><span>LAT / LON</span><b id="hc-coords">—</b></div>
+			<div class="hc-row"><span>ELEVATION</span><b id="hc-elev">—</b></div>
+			<div class="hc-row"><span>TIMEZONE</span><b id="hc-tz">—</b></div>
+			<div class="hc-row"><span>TLE CACHE</span><b id="hc-tle">—</b></div>
+			<div class="hc-row"><span>SENTINEL-2</span><b id="hc-s2">—</b></div>
+			<div class="hc-row"><span>AI MODE</span><b>BYOK</b></div>
+			<div class="hc-big" id="hc-big">NO<br>TARGET</div>
+			<div class="hc-cat" id="hc-big-sub">search a place to begin</div>
+		</div>
+	</section>
+
+	<main>
+		<!-- ── MAP + PASSES ── -->
+		<section class="dash two-col" id="map">
+			<article class="panel panel-map">
+				<div class="panel-head">
+					<h2>GROUND TRACK</h2>
+					<div class="panel-head-tools">
+						<span class="panel-tag">LEAFLET · OSM</span>
+						<a class="panel-tag panel-link" id="open-3d" href="./scene.html">3D FIELD →</a>
+					</div>
+				</div>
+				<div id="map-canvas"></div>
+				<div class="map-legend">
+					<span><i class="dot dot-place"></i>TARGET</span>
+					<span><i class="dot dot-box"></i>0.03° IMAGERY BOX</span>
+					<span><i class="dot dot-s2"></i>SENTINEL-2 PASS</span>
+					<span><i class="dot dot-ls"></i>LANDSAT PASS</span>
+				</div>
+			</article>
+
+			<article class="panel" id="passes">
+				<div class="panel-head">
+					<h2>ORBIT PASSES</h2>
+					<span class="panel-tag" id="pass-meta">7 DAYS</span>
+				</div>
+				<div class="progress-wrap">
+					<div class="progress"><span id="sat-progress"></span></div>
+					<p id="sat-status">IDLE — pick a place</p>
+				</div>
+				<div class="stat-row" id="pass-summary">
+					<div class="stat"><b>—</b><span>TOTAL</span></div>
+					<div class="stat"><b>—</b><span>S2</span></div>
+					<div class="stat"><b>—</b><span>LANDSAT</span></div>
+					<div class="stat"><b>—</b><span>OTHER</span></div>
+				</div>
+				<div class="pass-filters" id="pass-filters"></div>
+				<div class="pass-list" id="pass-list">
+					<div class="empty-note">Run a search and the 7-day orbit replay fills this list.</div>
+				</div>
+			</article>
+		</section>
+
+		<!-- ── IMAGERY ── -->
+		<section class="dash" id="imagery">
+			<div class="section-head">
+				<h2 class="section-title">SATELLITE <span class="outline">PIXELS</span></h2>
+				<div class="section-meta" id="imagery-meta">PLANETARY COMPUTER · STAC · LAST 7 DAYS</div>
+			</div>
+			<div class="imagery-grid" id="imagery-grid">
+				<div class="empty-note wide">No scenes yet. Sentinel-2 &amp; Landsat previews land here after a search.
+				</div>
+			</div>
+		</section>
+
+		<!-- ── WEATHER ── -->
+		<section class="dash" id="weather">
+			<div class="section-head">
+				<h2 class="section-title">WEATHER <span class="outline">DECK</span></h2>
+				<div class="section-meta" id="weather-meta">OPEN-METEO · 7D HISTORY + 7D FORECAST</div>
+			</div>
+			<div id="weather-body">
+				<div class="empty-note wide">Weather tiles, wind rose and vertical profile load with the target.</div>
+			</div>
+		</section>
+
+		<!-- ── AI ── -->
+		<section class="dash" id="ai">
+			<article class="ai-panel">
+				<div class="ai-head">
+					<div>
+						<h2 class="section-title">AI <span class="outline-lime">AGRONOMIST</span></h2>
+						<p class="ai-sub">BYOK — bring your own key. Reads yesterday vs. today, the 7-day satellite
+							record and the soil/atmosphere stack, then writes the field actions. Without a key the local
+							rule engine runs.</p>
+					</div>
+					<div class="ai-actions">
+						<span class="ai-status" id="ai-status">LOCAL ENGINE</span>
+						<button class="add-btn ai-run" id="ai-run" type="button" disabled>GENERATE INSIGHTS →</button>
+					</div>
+				</div>
+				<div class="ai-output" id="ai-output">
+					<div class="empty-note dark">Search a place to build the agronomy brief.</div>
+				</div>
+			</article>
+		</section>
+	</main>
+
+	<!-- ── FOOTER ── -->
+	<footer class="site-footer">
+		<div class="ft-big">FIELD<br>WATCH</div>
+		<div class="ft-cols">
+			<div>
+				<h4>DATA</h4>
+				<a href="https://celestrak.org/NORAD/elements/" target="_blank" rel="noopener">CelesTrak TLE</a>
+				<a href="https://planetarycomputer.microsoft.com/" target="_blank" rel="noopener">Planetary Computer</a>
+				<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>
+				<a href="https://nominatim.openstreetmap.org/" target="_blank" rel="noopener">Nominatim / OSM</a>
+			</div>
+			<div>
+				<h4>DOCS</h4>
+				<a href="https://developers.satellite-js.com/" target="_blank" rel="noopener">satellite.js 5.0.0</a>
+				<a href="https://leafletjs.com/" target="_blank" rel="noopener">Leaflet 1.9.4</a>
+				<a href="https://open-meteo.com/en/docs" target="_blank" rel="noopener">Open-Meteo API</a>
+			</div>
+			<div>
+				<h4>NOTES</h4>
+				<span class="ft-note-link">AI advice is advisory only</span>
+				<span class="ft-note-link">TLE cache: 2 hours</span>
+				<span class="ft-note-link">Pass rules: 145 / 93 km / 10°</span>
+			</div>
+		</div>
+		<div class="ft-note">© 2026 · FIELD//WATCH · BYOK — your key never leaves this browser · built for growers, not
+			for spreadsheets · imagery © ESA / USGS / Microsoft</div>
+	</footer>
+
+	<!-- ── SETTINGS DRAWER ── -->
+	<div class="drawer-overlay" id="settings-overlay"></div>
+	<aside class="drawer" id="settings-drawer" aria-hidden="true">
+		<div class="drawer-header">
+			<h3>AI SETTINGS · BYOK</h3>
+			<button class="drawer-close" id="settings-close" type="button">✕</button>
+		</div>
+		<form class="drawer-body" id="settings-form">
+			<p class="drawer-note">Insights are generated by an OpenAI-compatible chat endpoint. You can also use the
+				built-in local rule engine with no key at all.</p>
+
+			<div class="field">
+				<label for="ai-provider">Provider</label>
+				<select id="ai-provider">
+					<option value="zai">Z.ai · GLM (OpenAI-compatible)</option>
+					<option value="openai">OpenAI</option>
+					<option value="custom">Custom / proxy endpoint</option>
+				</select>
+			</div>
+
+			<div class="field">
+				<label for="ai-base">Base URL</label>
+				<input type="url" id="ai-base" placeholder="https://api.z.ai/api/paas/v4" spellcheck="false">
+			</div>
+
+			<div class="field">
+				<label for="ai-model">Model</label>
+				<input type="text" id="ai-model" placeholder="glm-4-flash" spellcheck="false">
+			</div>
+
+			<div class="field">
+				<label for="ai-key">API key</label>
+				<input type="password" id="ai-key" placeholder="paste key…" spellcheck="false" autocomplete="off">
+			</div>
+
+			<div class="drawer-actions">
+				<button class="add-btn" type="submit">SAVE KEY</button>
+				<button class="clear-btn" type="button" id="ai-clear">CLEAR</button>
+			</div>
+
+			<p class="drawer-warn">The key is kept in this browser's localStorage and sent from your browser straight to
+				the endpoint you choose. Only use a key you are comfortable holding client-side.</p>
+		</form>
+	</aside>
+
+	<!-- ── TOAST ── -->
+	<div class="toast" id="toast"><span id="toast-text">Ready</span></div>
+
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
+	<script src="./js/util.js"></script>
+	<script src="./js/satellites.js"></script>
+	<script src="./js/imagery.js"></script>
+	<script src="./js/weather.js"></script>
+	<script src="./js/charts.js"></script>
+	<script src="./js/ai.js"></script>
+	<script src="./js/search.js"></script>
+	<script src="./js/app.js"></script>
+</body>
+
+</html>
