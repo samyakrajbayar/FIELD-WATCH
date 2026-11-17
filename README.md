@@ -1,6 +1,6 @@
 # FIELD//WATCH — Agricultural Satellite & Soil Decision-Support System
 
-Track any field from orbit: 7-day satellite pass replay, Sentinel-2 and Landsat surface reflectance imagery, 16-day Open-Meteo atmospheric and soil stack, a real-time 3D terrain engine, and a client-side AI agronomist.
+Track any field from orbit: 7-day satellite pass replay, Sentinel-2 and Landsat surface reflectance imagery, 16-day Open-Meteo atmospheric and soil stack, a real-time 3D terrain engine (By Sateliite Data), and a client-side AI agronomist.
 
 ---
 
